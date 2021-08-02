@@ -1,4 +1,4 @@
-# Introduction
+# About
 
 *** IN DEVELOPMENT ***
 
