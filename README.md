@@ -1,6 +1,6 @@
 # About
 
-*** IN DEVELOPMENT ***
+*** IN TESTING ***
 
 moontran _is intended to_ be a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth for a specified time and position (latitude and longitude).
 
