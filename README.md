@@ -1,2 +1,4 @@
 # moontran
-Atmospheric irradiance model for lunar spectral irradiance incident on the surface of the earth
+Atmospheric irradiance model for lunar spectral irradiance incident on the surface of the earth at a specified time and position (latitude and longitude).
+
+_moontran_ estimates top-of-atmosphere (TOA) lunar spectral irradiance using Miller and Turner's (2009) lunar spectral irradiance model but with astronomical terms (e.g. solar and lunar coordinates, moon phase angle, true moon zenith angle from the earth's surface) estimated using Skyfield (Rhodes 2019) with JPL Planetary Development Ephemeris 440 (Park et al. 2021). Spectral transmission of TOA lunar irradiance to the earth's surface is estimated using the RADTRAN model (Gregg and Carder 1990) with a cloud-cover modification (Gregg 2002, Gregg et al. 2009). The cloud-cover modification is Slingo's (1989) delta-Eddington approximation for two-stream spectral clound transmission.
