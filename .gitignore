@@ -1,0 +1,10 @@
+# Data
+*.bsp
+
+# Manuscript and presentations
+/paper/
+*.docx
+*.pptx
+/Presentation/
+/plots/
+/output/
