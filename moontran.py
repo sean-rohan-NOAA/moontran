@@ -40,43 +40,60 @@ Slingo, A., 1989. A GCM Parameterization for the Shortwave Radiative Properties 
 
 """
 
-# import sys
 import datetime
+import sys
 import pytz
+import json
 import numpy as np
 import pandas as pd
 from skyfield.api import load
 from skyfield.framelib import ecliptic_frame
 from skyfield.api import N, E, wgs84
 
-# list_of_args = sys.argv
-# print(list_of_args[0])
-# print(list_of_args[1])
+# Function to expand 1L arrays
+def expand_array(x, n_vals):
+    if x.size == 1:
+        return(np.repeat(x, repeats = n_vals))
+    else:
+        return(x)
 
-# Input *TEST*
-longitude = np.array([-123, -123.0])
-latitude = np.array([47.4, 47.4])
-year = np.array([2021, 2021])
-hour = np.array([22, 20])
-minute = np.array([30, 00])
-month = np.array([7, 7])
-day = np.array([23, 23])
-surface_pressure = np.array([1009, 1009])
-water_vapor = np.array([1.42])
-wind_speed = np.array([0])
-alpha = np.array([1.14])
-air_mass = np.array([10])
-relative_humidity = np.array([50])
-ozone = "vanheuklon"
-adj_to_utc = True
-only_toa = False
-cloud_modification = True
-visual_range = np.array([8])
-aerosol_scale_height = np.array([1.0])
-cloud_droplet_radius = np.array([11.8])
-liquid_water_path = np.array([5.0])
-spectral_path = 'lunar_irrad_1AU_MeanME_350_700.csv'
-radtran_params_path = 'radtran_params.csv'
+# Convert 'yes' and 'no'
+def string_to_bool(x):
+    if x.lower() == 'yes':
+        return(True)
+    elif x.lower() == 'no':
+        return(False)
+    else:
+        raise Exception("String is not 'yes' or 'no'")
+
+# Input JSON source
+if len(sys.argv) > 1:
+    input_json = json.load(open(sys.argv[1]))
+    lunar_spectral_path = input_json['spectral_path']
+    radtran_params_path = input_json['radtran_params_path']
+    development_ephemeris_path = input_json['development_ephemeris_path']
+    ozone = input_json['ozone']
+    adj_to_utc = string_to_bool(x = input_json['adj_to_utc'])
+    only_total_pfd = string_to_bool(x = input_json['only_total_pfd'])
+    cloud_modification = string_to_bool(x = input_json['cloud_modification'])
+    cloud_droplet_radius = np.array(input_json['cloud_droplet_radius'])
+    angstrom_alpha = np.array(input_json['angstrom_alpha'])
+    n_obs = input_json['n_obs']
+    longitude = expand_array(x = np.array(input_json['longitude']), n_vals = n_obs)
+    latitude = expand_array(x = np.array(input_json['latitude']), n_vals = n_obs)
+    year = expand_array(x = np.array(input_json['year']), n_vals = n_obs)
+    hour = expand_array(x = np.array(input_json['hour']), n_vals = n_obs)
+    minute = expand_array(x = np.array(input_json['minute']), n_vals = n_obs)
+    month = expand_array(x = np.array(input_json['month']), n_vals = n_obs)
+    day = expand_array(x = np.array(input_json['day']), n_vals = n_obs)
+    surface_pressure = expand_array(x = np.array(input_json['surface_pressure']), n_vals = n_obs)
+    water_vapor = expand_array(x = np.array(input_json['water_vapor']), n_vals = n_obs)
+    wind_speed = expand_array(x = np.array(input_json['wind_speed']), n_vals = n_obs)
+    air_mass = expand_array(x = np.array(input_json['air_mass']), n_vals = n_obs)
+    relative_humidity = expand_array(x = np.array(input_json['relative_humidity']), n_vals = n_obs)
+    liquid_water_path = expand_array(x = np.array(input_json['liquid_water_path']), n_vals = n_obs)
+    visual_range = expand_array(x = np.array(input_json['visual_range']), n_vals = n_obs)
+    aerosol_scale_height = expand_array(x = np.array(input_json['aerosol_scale_height']), n_vals = n_obs)
 
 # Set constants
 km_per_au = 149598073.0
@@ -84,11 +101,11 @@ mean_earthsun_dist = 149598022.6071 / km_per_au
 mean_earthmoon_dist = 384400.0 / km_per_au
 radius_earth = 6378.140 / km_per_au
 water_refraction = 1.341
+mW_to_W = 1.0E-6
 CONST = (1/(6.626176E-34*299792458.0))*1.0E-10
-mWum_to_Wnm = 1.0E-6
 
 # Load TOA mean lunar spectral irradiance table, distance variables (Miller and Turner 2009)
-spectral_df = pd.read_csv(spectral_path, header = 0)
+spectral_df = pd.read_csv(lunar_spectral_path, header = 0)
 w_v = spectral_df['wavelength'].drop_duplicates()
 n_wavelength = len(w_v)
 spectral_df['lunar_phase'] = np.repeat(np.arange(0.0,181.0,1.0), n_wavelength)
@@ -97,7 +114,7 @@ spectral_df['lunar_phase'] = np.repeat(np.arange(0.0,181.0,1.0), n_wavelength)
 radtran_df = pd.read_csv(radtran_params_path, header = 0)
 
 # Load JPL Planetary and Lunar Development Ephemeris 440 (Park et al. 2021)
-eph = load('de440.bsp')
+eph = load(development_ephemeris_path)
 sun, moon, earth = eph['sun'], eph['moon'], eph['earth']
 
 # Set up time zones
@@ -116,10 +133,18 @@ moon_zenith = []
 earthmoon_dist = []
 earthsun_dist = []
 moonsun_dist = []
-lunar_toa = np.empty(shape = [len(longitude), n_wavelength])
+lunar_toa = np.empty(shape = [n_obs, n_wavelength])
+direct_surface_wm2 = np.empty(shape = [n_obs, n_wavelength])
+direct_subsurface_wm2 = np.empty(shape = [n_obs, n_wavelength])
+diffuse_surface_wm2 = np.empty(shape = [n_obs, n_wavelength])
+diffuse_subsurface_wm2 = np.empty(shape = [n_obs, n_wavelength])
+diffuse_surface_pfd = np.empty(shape = [n_obs, n_wavelength])
+diffuse_subsurface_pfd = np.empty(shape = [n_obs, n_wavelength])
+direct_surface_pfd = np.empty(shape = [n_obs, n_wavelength])
+direct_subsurface_pfd = np.empty(shape = [n_obs, n_wavelength])
 
 # Calculate positions, distances, phases, zenith, and altitude
-for ii in range(len(longitude)):
+for ii in range(n_obs):
     
     # Set UTC Time
     hhour.append(hour[ii] + minute[ii] / 60.0)
@@ -170,7 +195,7 @@ for ii in range(len(longitude)):
     # MT2009 Lunar irradiance at phase with fractional phase degree weighting
     frac = mt_phase % 1
     lunar_toa[ii,:] = moon_etc_factor * ((1.0-frac)*spectral_df['E'][np.floor(mt_phase) == spectral_df['lunar_phase']].to_numpy() +
-     (frac)*spectral_df['E'][np.ceil(mt_phase) == spectral_df['lunar_phase']].to_numpy())
+     (frac)*spectral_df['E'][np.ceil(mt_phase) == spectral_df['lunar_phase']].to_numpy()) * mW_to_W
 
     # (GC 13) Geometric airmass path length for zenith <= 90 degrees(Karsten and Young 1989)
     if moon_zenith[ii] <= 90:
@@ -209,15 +234,15 @@ for ii in range(len(longitude)):
     transmission_umg = np.exp(-1.41*radtran_df['a_umg']*pressure_corr_airmass/(1+118.3*radtran_df['a_umg']*pressure_corr_airmass)**0.45) 
   
     # (19) Transmission: Water (Bird and Riordan 1986)
-    transmission_water = np.exp(-0.2385*radtran_df['a_water']*water_vapor*geometric_airmass/(1+20.07*radtran_df['a_water']*water_vapor*geometric_airmass)**0.45)
+    transmission_water = np.exp(-0.2385*radtran_df['a_water']*water_vapor[ii]*geometric_airmass/(1+20.07*radtran_df['a_water']*water_vapor[ii]*geometric_airmass)**0.45)
 
     # (35) Asymmetry parameter for scattering phase function
-    if alpha < 0.0:
+    if angstrom_alpha < 0.0:
         asym <- 0.82
-    elif alpha > 1.2:
+    elif angstrom_alpha > 1.2:
         asym = 1.2
     else:
-        asym = -0.1417*alpha+0.82
+        asym = -0.1417*angstrom_alpha+0.82
 
     # Forward scattering probability
     b_3 = np.log(1-asym)
@@ -226,17 +251,17 @@ for ii in range(len(longitude)):
     fsp = 1 - 0.5*np.exp((b_1 + b_2*moon_cos_zenith)*moon_cos_zenith)
   
     # (36) Single-scattering albedo
-    omega_a = (-0.0032*air_mass + 0.972) * np.exp(3.06*relative_humidity*1.0E-4)
+    omega_a = (-0.0032*air_mass[ii] + 0.972) * np.exp(3.06*relative_humidity[ii]*1.0E-4)
 
     # (39-43) Sea-foam reflectance as a function of wind stress (Trenberth et al. 1989)
-    if wind_speed <= 4.0:
+    if wind_speed[ii] <= 4.0:
         rho_f = 0.0
-    elif (wind_speed > 4.0) & (wind_speed <= 7.0):
-        drag = (0.62 + 1.56 * wind_speed**-1.0)*1E-3
-        rho_f = (2.2E-5* 1.2E3 * drag * wind_speed**2)-4E-4
+    elif (wind_speed[ii] > 4.0) & (wind_speed[ii] <= 7.0):
+        drag = (0.62 + 1.56 * wind_speed[ii]**-1.0)*1E-3
+        rho_f = (2.2E-5* 1.2E3 * drag * wind_speed[ii]**2)-4E-4
     else:
-        drag = (0.49 + 0.065 * wind_speed) * 1E-3
-        rho_f = (4.5E-5 * 1.2E3 * drag - 4E-5) * wind_speed**2.0
+        drag = (0.49 + 0.065 * wind_speed[ii]) * 1E-3
+        rho_f = (4.5E-5 * 1.2E3 * drag - 4E-5) * wind_speed[ii]**2.0
 
     # Future foam spectral correction 
     # foam_spectral_correction <- 1
@@ -246,15 +271,15 @@ for ii in range(len(longitude)):
     rho_dsp = 0
 
     if moon_zenith[ii] >= 40:
-        if wind_speed > 2:
-            rho_dsp = 0.0253 * np.exp((-7.14E-4 * wind_speed + 0.0618)*(moon_zenith[ii] - 40.0))
+        if wind_speed[ii] > 2:
+            rho_dsp = 0.0253 * np.exp((-7.14E-4 * wind_speed[ii] + 0.0618)*(moon_zenith[ii] - 40.0))
         else:
             moon_z_rad = np.deg2rad(moon_zenith[ii])
             refracted_angle = np.arcsin(np.sin(moon_z_rad) / water_refraction)
             rho_dsp = 0.5 * (0.5 * np.sin(moon_z_rad)**2.0 / np.sin(moon_z_rad + refracted_angle)**2+ np.tan(moon_z_rad - refracted_angle)**2.0 / np.tan(moon_z_rad + refracted_angle)**2.0)
 
     # Diffuse specular reflectance (Burt 1954)
-    if wind_speed > 4:
+    if wind_speed[ii] > 4:
         rho_ssp = 0.057
     else:
         rho_ssp = 0.066
@@ -272,7 +297,7 @@ for ii in range(len(longitude)):
 
     if cloud_modification:
         # Cloud Optical Depth (Slingo 1989 - Eqn. 1) with a mean cloud droplet radius
-        tau_clouds = liquid_water_path * (radtran_df['cloud_a_i'] + radtran_df['cloud_b_i']/cloud_droplet_radius)
+        tau_clouds = liquid_water_path[ii] * (radtran_df['cloud_a_i'] + radtran_df['cloud_b_i']/cloud_droplet_radius)
 
         # Single Scatter Albedo (Slingo 1989 - Eqn. 2)
         omega_clouds = 1.0 - radtran_df['cloud_c_i'] - radtran_df['cloud_d_i'] * cloud_droplet_radius
@@ -353,7 +378,7 @@ for ii in range(len(longitude)):
         taua_550 = ca_550 * aerosol_scale_height
 
         # (Rearranging 27) - Calculate turbidity coefficient (beta)
-        beta = taua_550 * 0.55**alpha
+        beta = taua_550 * 0.55**angstrom_alpha
         
         # (27) Wavelength-dependent aerosol optical thickness
         tau_a = beta * (w_v**-1.0) 
@@ -371,46 +396,61 @@ for ii in range(len(longitude)):
         transmission_aa = np.exp(-1.0 * (1.0 - omega_a) * tau_a * geometric_airmass)
 
     # (9) Direct downwelling irradiance
-    direct_surface_wm2 = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_aerosol * transmission_umg * transmission_water * transmission_toz * transmission_rayleigh * transmission_cloud_total_direct * mWum_to_Wnm
-    direct_subsurface_wm2 = direct_surface_wm2 * (1.0 - rho_direct)
+    direct_surface_wm2[ii,:] = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_aerosol * transmission_umg * transmission_water * transmission_toz * transmission_rayleigh * transmission_cloud_total_direct
+    direct_surface_wm2[ii,:] = np.where(direct_surface_wm2[ii,:] < 0.0, 0.0, direct_surface_wm2[ii,:])
+    direct_subsurface_wm2[ii,:] = direct_surface_wm2[ii,:] * (1.0 - rho_direct)
 
     # (4) Diffuse component from Rayleigh scattering
-    diffuse_rayleigh = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith *transmission_toz * transmission_umg * transmission_water * transmission_aa * (1.0 - transmission_rayleigh**0.95)*0.5 * mWum_to_Wnm
-    diffuse_scattering = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_toz * transmission_umg * transmission_water * transmission_rayleigh * (1.0 - transmission_as) * fsp * transmission_cloud_diffuse * mWum_to_Wnm
+    diffuse_rayleigh = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith *transmission_toz * transmission_umg * transmission_water * transmission_aa * (1.0 - transmission_rayleigh**0.95)*0.5
+    diffuse_scattering = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_toz * transmission_umg * transmission_water * transmission_rayleigh * (1.0 - transmission_as) * fsp * transmission_cloud_diffuse
   
     # (10) Diffuse downwelling irradiance
-    diffuse_surface_wm2 = diffuse_rayleigh + diffuse_scattering
-    diffuse_subsurface_wm2 = diffuse_surface_wm2 * (1.0 - rho_diffuse)
+    diffuse_surface_wm2[ii,:] = diffuse_rayleigh + diffuse_scattering
+    diffuse_surface_wm2[ii,:] = np.where(diffuse_surface_wm2[ii,:] < 0.0, 0.0, diffuse_surface_wm2[ii,:])
+    diffuse_subsurface_wm2[ii,:] = diffuse_surface_wm2[ii,:] * (1.0 - rho_diffuse)
 
-    print("Moon zenith (degrees): %s"  %moon_zenith[ii])
-    print("Moon phase (deg): %s"  %mt_phase)
-    print("Geometric air mass: %s"  %geometric_airmass)
-    print("Press. corr. air mass: %s"  %pressure_corr_airmass)
-    print("Effective airmass of ozone: %s"  %amoz)
-    print("TOA Irradiance: %s"  %np.sum(lunar_toa[ii,:]*mWum_to_Wnm))
-    print("Diffuse surface: %s"  %np.sum(diffuse_surface_wm2))
-    print("Direct surface: %s" %np.sum(direct_surface_wm2))
-    print("Moon factor: %s" %moon_etc_factor)
-    print("Transmission (ozone) %s" %np.min(transmission_toz))
-    print("Transmission (umg) %s" %np.min(transmission_umg))
-    print("Transmission (water) %s" %np.min(transmission_water))
-    print("Transmission (aa) %s" %np.min(transmission_aa))
-    print("Transmission (Rayleigh) %s" %np.min(transmission_rayleigh))
-    print("Transmission (cloud direct) %s" %np.min(transmission_cloud_total_direct))
-    print("Transmission (cloud diffuse) %s" %np.min(transmission_cloud_diffuse))
-    print("Moon cosine zenith %s" %moon_cos_zenith)
-    print("----")
+    #print("Moon zenith (degrees): %s"  %moon_zenith[ii])
+    #print("Moon phase (deg): %s"  %mt_phase)
+    #print("Geometric air mass: %s"  %geometric_airmass)
+    #print("Press. corr. air mass: %s"  %pressure_corr_airmass)
+    #print("Effective airmass of ozone: %s"  %amoz)
+    #print("TOA Irradiance: %s"  %np.sum(lunar_toa[ii,:]))
+    #print("Diffuse surface: %s"  %np.sum(diffuse_surface_wm2[ii,:]))
+    #print("Direct surface: %s" %np.sum(direct_surface_wm2[ii,:]))
+    #print("Moon factor: %s" %moon_etc_factor)
+    #print("Transmission (ozone) %s" %np.min(transmission_toz))
+    #print("Transmission (umg) %s" %np.min(transmission_umg))
+    #print("Transmission (water) %s" %np.min(transmission_water))
+    #print("Transmission (aa) %s" %np.min(transmission_aa))
+    #print("Transmission (Rayleigh) %s" %np.min(transmission_rayleigh))
+    #print("Transmission (cloud direct) %s" %np.min(transmission_cloud_total_direct))
+    #print("Transmission (cloud diffuse) %s" %np.min(transmission_cloud_diffuse))
+    #print("Moon cosine zenith %s" %moon_cos_zenith)
+    #print((1.0 - rho_direct))
+    #print((1.0 - rho_diffuse))
+    #print("----")
 
     # Convert watts to photon flux density
-    diffuse_surface_pfd = w_v * diffuse_surface_wm2 * CONST
-    diffuse_subsurface_pfd = w_v * diffuse_subsurface_wm2 * CONST
+    diffuse_surface_pfd[ii,:] = w_v * diffuse_surface_wm2[ii,:] * CONST
+    diffuse_subsurface_pfd[ii,:] = w_v * diffuse_subsurface_wm2[ii,:] * CONST
   
-    direct_surface_pfd = w_v * direct_surface_wm2 * CONST
-    direct_subsurface_pfd = w_v * direct_subsurface_wm2 * CONST
+    direct_surface_pfd[ii,:] = w_v * direct_surface_wm2[ii,:] * CONST
+    direct_subsurface_pfd[ii,:] = w_v * direct_subsurface_wm2[ii,:] * CONST
 
-if only_toa:
-    print("Moon zenith (degrees): %s"  %moon_zenith[ii])
-    print("Moon phase (deg): %s"  %mt_phase)
-    print("Geometric air mass: %s"  %geometric_airmass)
-    print("Press. corr. air mass: %s"  %pressure_corr_airmass)
-    print("Effective airmass of ozone: %s"  %amoz)
+total_surface_pfd = diffuse_surface_pfd + direct_surface_pfd
+total_subsurface_pfd = diffuse_subsurface_pfd + direct_subsurface_pfd
+
+# Write pfd output with wavelength in nanometers as column names
+pd.DataFrame(total_surface_pfd, columns = (w_v * 1000).astype(int)).to_csv("total_surface_pfd.csv", index = False)
+pd.DataFrame(total_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("total_subsurface_pfd.csv", index = False)
+
+if not only_total_pfd:
+    pd.DataFrame(direct_surface_wm2, columns = (w_v * 1000).astype(int)).to_csv("direct_surface_wm2.csv", index = False)
+    pd.DataFrame(direct_subsurface_wm2, columns = (w_v * 1000).astype(int)).to_csv("direct_subsurface_wm2.csv", index = False)
+    pd.DataFrame(diffuse_surface_wm2, columns = (w_v * 1000).astype(int)).to_csv("diffuse_surface_wm2.csv", index = False)
+    pd.DataFrame(diffuse_subsurface_wm2, columns = (w_v * 1000).astype(int)).to_csv("diffuse_subsurface_wm2.csv", index = False)
+
+    pd.DataFrame(direct_surface_pfd, columns = (w_v * 1000).astype(int)).to_csv("direct_surface_pfd.csv", index = False)
+    pd.DataFrame(direct_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("direct_subsurface_pfd.csv", index = False)
+    pd.DataFrame(diffuse_surface_pfd, columns = (w_v * 1000).astype(int)).to_csv("diffuse_surface_pfd.csv", index = False)
+    pd.DataFrame(diffuse_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("diffuse_subsurface_pfd.csv", index = False)
