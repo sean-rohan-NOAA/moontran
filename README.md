@@ -1,15 +1,36 @@
-# About
+# Description
 
 *** IN DEVELOPMENT ***
 
-moontran _is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth for a specified time and position (latitude and longitude).
+moontran is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth, and just below the sea surface, for a specified time and location (latitude and longitude), given environmental conditions.
 
 The model estimates top-of-atmosphere (TOA) lunar spectral irradiance using Miller and Turner's (2009) lunar spectral irradiance model but with astronomical terms (e.g. solar and lunar coordinates, moon phase angle, true moon zenith angle from the earth's surface) calculated using [Skyfield](https://github.com/skyfielders/python-skyfield/) (Rhodes, 2019) with JPL Planetary Development Ephemeris 440 (Park et al., 2021). The RADTRAN model (Gregg and Carder, 1990) with a cloud-cover modification (Gregg, 2002; Gregg and Casey, 2009) is then used to estimate spectral transmission of TOA lunar irradiance to the earth's surface. The cloud-cover modification is Slingo's (1989) delta-Eddington approximation for two-stream spectral clound transmission.
 
-Arguments are passed to the model (modtran.py function) using a JSON file.
+Arguments are passed to the modtran.py function using a JSON file.
+
+## Data sets
+
+The *moontran* repository includes files containing data sets from several sources that are necessary to estimate lunar spectral irradiances. The contents of each file are described here:
+
+*lunar_irrad__1AU_MeanME_350_700.csv* - Spectral top of atmosphere lunar irradiance for 350-700 nm wavelenghts (1 nm resolution)
+
+*radtran_params.csv* - Spectral absorption coefficients and model parameters for the atmosphere and clouds
+- w_v_nm: Wavelength in nanometers
+- solar_E_wm2um: Top of atomsphere solar irradiance in W/m^-2/micrometer (not used in moontran; Bird and Riordan, 1986)
+- a_ozone: Atmospheric absorption coefficient for ozone (Bird and Riordan, 1986)
+- a_umg: Atmospheric absorption coefficient for uniformly mixed gasses (Bird and Riordan, 1986)
+- a_water: Atmospheric absorption absorption coefficient for water vapor (Bird and Riordan, 1986)
+- cloud_a_i: _a<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+- cloud_b_i: _b<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+- cloud_c_i: _c<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+- cloud_d_i: _d<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+- cloud_e_i: _e<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+- cloud_f_i: _f<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
+
 
 # References
 
+- Bird, R.E., Riordan, C., 1986. Simple solar spectral model for direct and diffuse irradiance on horizontal and tilted planes at the Earth’s surface for cloudless atmospheres. J. Clim. Appl. Meteorol. 25, 87–97. https://doi.org/10.1175/1520-0450(1986)025<0087:SSSMFD>2.0.CO;2
 - Gregg, W.W., Carder, K.L., 1990. A simple spectral solar irradiance model for cloudless maritime atmospheres. Limnol. Oceanogr. 35, 1657–1675. https://doi.org/10.4319/lo.1990.35.8.1657
 - Gregg, W.W., Casey, N.W., 2009. Skill assessment of a spectral ocean-atmosphere radiative model. J. Mar. Syst. 76, 49–63. https://doi.org/10.1016/j.jmarsys.2008.05.007<br>
 - Miller, S.D., Turner, R.E., 2009. A dynamic lunar spectral irradiance data set for NPOESS/VIIRS day/night band nighttime environmental applications. IEEE Trans. Geosci. Remote Sens. 47, 2316–2329. https://doi.org/10.1109/TGRS.2009.2012696<br>
