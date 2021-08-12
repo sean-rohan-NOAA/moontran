@@ -12,21 +12,24 @@ Arguments are passed to the modtran.py function using a JSON file.
 
 The *moontran* repository includes files containing data sets from several sources that are necessary to estimate lunar spectral irradiances. The contents of each file are described here:
 
-<b>lunar_irrad__1AU_MeanME_350_700.csv - Spectral top of atmosphere lunar irradiance for 350-700 nm wavelenghts (1 nm resolution)</b>
+<b>lunar_irrad__1AU_MeanME_350_700.csv</b>
+Spectral top of atmosphere (TOA) lunar irradiances for 350-700 nm wavelengths (1 nm resolution); a subset of the 202-2800 nm TOA spectral irradiances from Miller and Turner (2009).
+- w_v_um: Wavelength in micrometers.
+- lunar_E_mwm2um: Top of atmosphere lunar irradiance in mW<sup>-2</sup>&micro;m<sup>-1</sup> (Miller and Turner, 2009).
 
-<b>radtran_params.csv - Spectral absorption coefficients and model parameters for the atmosphere and clouds</b>
+<b>radtran_params.csv</b>
+Spectral absorption coefficients and model parameters for the atmosphere and clouds
 - w_v_nm: Wavelength in nanometers
-- solar_E_wm2um: Top of atomsphere solar irradiance in Wm<sup>-2</sup>&micro;m<sup>-1</sup> (not used in moontran; Bird and Riordan, 1986)
-- a_ozone: Atmospheric absorption coefficient for ozone (Bird and Riordan, 1986)
-- a_umg: Atmospheric absorption coefficient for uniformly mixed gasses (Bird and Riordan, 1986)
-- a_water: Atmospheric absorption absorption coefficient for water vapor (Bird and Riordan, 1986)
-- cloud_a_i: _a<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-- cloud_b_i: _b<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-- cloud_c_i: _c<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-- cloud_d_i: _d<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-- cloud_e_i: _e<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-- cloud_f_i: _f<sub>i</sub>_ parameter for Slingo's (1989) delta-Eddington approximation for two-stream approach for cloud transmission.
-
+- solar_E_wm2um: Top of atomsphere solar irradiance in Wm<sup>-2</sup>&micro;m<sup>-1</sup> (not used in moontran; Bird and Riordan, 1986).
+- a_ozone: Atmospheric absorption coefficient for ozone (Bird and Riordan, 1986).
+- a_umg: Atmospheric absorption coefficient for uniformly mixed gasses (Bird and Riordan, 1986).
+- a_water: Atmospheric absorption absorption coefficient for water vapor (Bird and Riordan, 1986).
+- cloud_a_i: _a<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+- cloud_b_i: _b<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+- cloud_c_i: _c<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+- cloud_d_i: _d<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+- cloud_e_i: _e<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+- cloud_f_i: _f<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
 
 # References
 

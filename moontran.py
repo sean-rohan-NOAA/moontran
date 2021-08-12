@@ -106,7 +106,7 @@ CONST = (1/(6.626176E-34*299792458.0))*1.0E-10
 
 # Load TOA mean lunar spectral irradiance table, distance variables (Miller and Turner 2009)
 spectral_df = pd.read_csv(lunar_spectral_path, header = 0)
-w_v = spectral_df['wavelength'].drop_duplicates()
+w_v = spectral_df['w_v_um'].drop_duplicates()
 n_wavelength = len(w_v)
 spectral_df['lunar_phase'] = np.repeat(np.arange(0.0,181.0,1.0), n_wavelength)
 
@@ -194,8 +194,8 @@ for ii in range(n_obs):
 
     # MT2009 Lunar irradiance at phase with fractional phase degree weighting
     frac = mt_phase % 1
-    lunar_toa[ii,:] = moon_etc_factor * ((1.0-frac)*spectral_df['E'][np.floor(mt_phase) == spectral_df['lunar_phase']].to_numpy() +
-     (frac)*spectral_df['E'][np.ceil(mt_phase) == spectral_df['lunar_phase']].to_numpy()) * mW_to_W
+    lunar_toa[ii,:] = moon_etc_factor * ((1.0-frac)*spectral_df['lunar_E_mwm2um'][np.floor(mt_phase) == spectral_df['lunar_phase']].to_numpy() +
+     (frac)*spectral_df['lunar_E_mwm2um'][np.ceil(mt_phase) == spectral_df['lunar_phase']].to_numpy()) * mW_to_W
 
     # (GC 13) Geometric airmass path length for zenith <= 90 degrees(Karsten and Young 1989)
     if moon_zenith[ii] <= 90:
