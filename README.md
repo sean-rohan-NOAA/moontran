@@ -2,11 +2,9 @@
 
 *** IN DEVELOPMENT ***
 
-moontran is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth, and just below the sea surface, for a specified time and location (latitude and longitude), given environmental conditions.
+*moontran* is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth, and just below the sea surface, for a specified time and location (latitude and longitude), given environmental conditions.
 
 The model estimates top-of-atmosphere (TOA) lunar spectral irradiance using Miller and Turner's (2009) lunar spectral irradiance model but with astronomical terms (e.g. solar and lunar coordinates, moon phase angle, true moon zenith angle from the earth's surface) calculated using [Skyfield](https://github.com/skyfielders/python-skyfield/) (Rhodes, 2019) with JPL Planetary Development Ephemeris 440 (Park et al., 2021). The RADTRAN model (Gregg and Carder, 1990) with a cloud-cover modification (Gregg, 2002; Gregg and Casey, 2009) is then used to estimate spectral transmission of TOA lunar irradiance to the earth's surface. The cloud-cover modification is Slingo's (1989) delta-Eddington approximation for two-stream spectral clound transmission.
-
-Arguments are passed to the modtran.py function using a JSON file.
 
 ## Data sets
 
@@ -30,6 +28,12 @@ The *moontran* repository includes files containing data sets from several sourc
 - cloud_d_i: _d<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
 - cloud_e_i: _e<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
 - cloud_f_i: _f<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
+
+## Usage
+
+*moontran* arguments are specified in a JSON file that contains all of the arguments needed to run the model. In the JSON file, time (e.g., month, hour), space (latitude, longitude), and environment (e.g., water vapor, wind speed) can have a length of one or length equal to the number of observations. Paths to data sources that are used in the model must be specified. For an example of a JSON input file, see the 'moontran_input.json' file in the repository.
+
+Note to R Users: The 'rjson' package can convert lists to JSON strings that can be used by moontran().
 
 # References
 
