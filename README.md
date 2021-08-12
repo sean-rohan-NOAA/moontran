@@ -12,11 +12,11 @@ Arguments are passed to the modtran.py function using a JSON file.
 
 The *moontran* repository includes files containing data sets from several sources that are necessary to estimate lunar spectral irradiances. The contents of each file are described here:
 
-*lunar_irrad__1AU_MeanME_350_700.csv* - Spectral top of atmosphere lunar irradiance for 350-700 nm wavelenghts (1 nm resolution)
+<b>lunar_irrad__1AU_MeanME_350_700.csv - Spectral top of atmosphere lunar irradiance for 350-700 nm wavelenghts (1 nm resolution)</b>
 
-*radtran_params.csv* - Spectral absorption coefficients and model parameters for the atmosphere and clouds
+<b>radtran_params.csv - Spectral absorption coefficients and model parameters for the atmosphere and clouds</b>
 - w_v_nm: Wavelength in nanometers
-- solar_E_wm2um: Top of atomsphere solar irradiance in W/m^-2/micrometer (not used in moontran; Bird and Riordan, 1986)
+- solar_E_wm2um: Top of atomsphere solar irradiance in Wm<sup>-2</sup>&micro;m<sup>-1</sup> (not used in moontran; Bird and Riordan, 1986)
 - a_ozone: Atmospheric absorption coefficient for ozone (Bird and Riordan, 1986)
 - a_umg: Atmospheric absorption coefficient for uniformly mixed gasses (Bird and Riordan, 1986)
 - a_water: Atmospheric absorption absorption coefficient for water vapor (Bird and Riordan, 1986)
