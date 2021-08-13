@@ -1,6 +1,10 @@
 # Data
 *.bsp
 
+# Build
+__setup__.py
+/moontran/__init__.py
+
 # Cache
 __pycache__/
 
