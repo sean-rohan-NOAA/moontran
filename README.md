@@ -1,6 +1,6 @@
 # Description
 
-*** IN DEVELOPMENT ***
+*** IN DEVELOPMENT -- August 12, 2021 ***
 
 *moontran* is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth, and just below the sea surface, for a specified time and location (latitude and longitude), given environmental conditions.
 
@@ -13,10 +13,10 @@ The *moontran* repository includes files containing data sets from several sourc
 <b>lunar_irrad__1AU_MeanME_350_700.csv</b>
 <br>Spectral top of atmosphere (TOA) lunar irradiances for 350-700 nm wavelengths (1 nm resolution); a subset of the 202-2800 nm TOA spectral irradiances from Miller and Turner (2009).
 - w_v_um: Wavelength in micrometers.
-- lunar_E_mwm2um: Top of atmosphere lunar irradiance in mW<sup>-2</sup>&micro;m<sup>-1</sup> (Miller and Turner, 2009).
+- lunar_E_mwm2um: Top of atmosphere lunar irradiance in mW<sup>-2</sup>&micro;m<sup>-1</sup>.
 
 <b>radtran_params.csv</b>
-<br>Spectral absorption coefficients and model parameters for the atmosphere and clouds
+<br>Spectral absorption coefficients and model parameters for the atmosphere and clouds.
 - w_v_nm: Wavelength in nanometers
 - solar_E_wm2um: Top of atomsphere solar irradiance in Wm<sup>-2</sup>&micro;m<sup>-1</sup> (not used in moontran; Bird and Riordan, 1986).
 - a_ozone: Atmospheric absorption coefficient for ozone (Bird and Riordan, 1986).
@@ -29,11 +29,13 @@ The *moontran* repository includes files containing data sets from several sourc
 - cloud_e_i: _e<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
 - cloud_f_i: _f<sub>i</sub>_ parameter for delta-Eddington approximation for two-stream approach for cloud transmission (Slingo, 1989).
 
-## Usage
+# Usage
 
-*moontran* arguments are specified in a JSON file that contains all of the arguments needed to run the model. In the JSON file, time (e.g., month, hour), space (latitude, longitude), and environment (e.g., water vapor, wind speed) can have a length of one or length equal to the number of observations. Paths to data sources that are used in the model must be specified. For an example of a JSON input file, see the 'moontran_input.json' file in the repository.
+Running *moontran* requires using a JSON file that specifies all of the arguments that are needed to run the model. For an example of a JSON input file, see the 'moontran_input.json' file in the repository.
 
-Note to R Users: The 'rjson' package can convert lists to JSON strings that can be used by moontran().
+In the JSON file, arguments that specify time (e.g., month, hour), space (latitude, longitude), and environmental conditions (e.g., water_vapor, wind_speed) must have length equal to one (1) or the number of observations (n_obs). Arguments that specify paths to data sources for constants, user-specified constants (e.g., cloud_droplet_radius), and mode for the model (e.g., adj_to_utc, cloud_modification) must have length equal to one (1). 
+
+Tip for R Users: The 'rjson' package converts lists to JSON strings that can be written to a file and used by moontran().
 
 # References
 
@@ -45,6 +47,6 @@ Note to R Users: The 'rjson' package can convert lists to JSON strings that can 
 - Rhodes, B., 2019. Skyfield: High precision research-grade positions for planets and Earth satellites generator. Version 1.39. ascl:1907.024. https://github.com/skyfielders/python-skyfield<br>
 - Slingo, A., 1989. A GCM Parameterization for the Shortwave Radiative Properties of Water Clouds. J. Atmos. Sci. 46, 1419–1427. [https://doi.org/10.1175/1520-0469(1989)046<1419:AGPFTS>2.0.CO;2](https://doi.org/10.1175/1520-0469(1989)046<1419:AGPFTS>2.0.CO;2)<br>
 
-## Legal Disclaimer
+# Legal Disclaimer
 
 This repository is a software product and is not official communication of the National Oceanic and Atmospheric Administration (NOAA), or the United States Department of Commerce (DOC). All NOAA GitHub project code is provided on an 'as is' basis and the user assumes responsibility for its use. Any claims against the DOC or DOC bureaus stemming from the use of this GitHub project will be governed by all applicable Federal law. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation, or favoring by the DOC. The DOC seal and logo, or the seal and logo of a DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by the DOC or the United States Government.

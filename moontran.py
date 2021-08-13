@@ -40,7 +40,7 @@ Slingo, A., 1989. A GCM Parameterization for the Shortwave Radiative Properties 
 
 """
 
-def moontran(json_path):
+def moontran(json_obj):
     import datetime
     import pytz
     import json
@@ -66,14 +66,22 @@ def moontran(json_path):
         else:
             raise Exception("String is not 'yes' or 'no'")
 
-    # Input JSON source
+    def is_json(x):
+        try:
+            json_object = json.loads(x)
+        except ValueError as e:
+            return(json.load(open(x)))
+        return(json_object)
 
-    input_json = json.load(open(json_path))
+    # Input JSON source
+    input_json = is_json(x = json_obj)
+
     lunar_spectral_path = input_json['spectral_path']
     radtran_params_path = input_json['radtran_params_path']
     development_ephemeris_path = input_json['development_ephemeris_path']
     ozone = input_json['ozone']
     adj_to_utc = string_to_bool(x = input_json['adj_to_utc'])
+    return_subsurface_pfd = string_to_bool(x = input_json['return_subsurface_pfd'])
     only_total_pfd = string_to_bool(x = input_json['only_total_pfd'])
     cloud_modification = string_to_bool(x = input_json['cloud_modification'])
     cloud_droplet_radius = np.array(input_json['cloud_droplet_radius'])
@@ -440,6 +448,10 @@ def moontran(json_path):
     total_surface_pfd = diffuse_surface_pfd + direct_surface_pfd
     total_subsurface_pfd = diffuse_subsurface_pfd + direct_subsurface_pfd
 
+    # Only return total_subsurface_pfd
+    if return_subsurface_pfd:
+        return(pd.DataFrame(total_subsurface_pfd, columns = (w_v * 1000).astype(int)))
+    
     # Write pfd output with wavelength in nanometers as column names
     pd.DataFrame(total_surface_pfd, columns = (w_v * 1000).astype(int)).to_csv("total_surface_pfd.csv", index = False)
     pd.DataFrame(total_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("total_subsurface_pfd.csv", index = False)
