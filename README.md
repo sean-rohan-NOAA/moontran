@@ -1,10 +1,10 @@
+# Background
+
+*** IN DEVELOPMENT -- August 25, 2021 ***
+
 # Description
 
-*** IN DEVELOPMENT -- August 12, 2021 ***
-
-*moontran* is a coupled lunar spectral irradiance and empirical atmospheric radiative transfer model for estimating lunar spectral irradiance at the surface of the earth, and just below the sea surface, for a specified time and location (latitude and longitude), given environmental conditions.
-
-The model estimates top-of-atmosphere (TOA) lunar spectral irradiance using Miller and Turner's (2009) lunar spectral irradiance model but with astronomical terms (e.g. solar and lunar coordinates, moon phase angle, true moon zenith angle from the earth's surface) calculated using [Skyfield](https://github.com/skyfielders/python-skyfield/) (Rhodes, 2019) with JPL Planetary Development Ephemeris 440 (Park et al., 2021). The RADTRAN model (Gregg and Carder, 1990) with a cloud-cover modification (Gregg, 2002; Gregg and Casey, 2009) is then used to estimate spectral transmission of TOA lunar irradiance to the earth's surface. The cloud-cover modification is Slingo's (1989) delta-Eddington approximation for two-stream spectral clound transmission.
+The *moontran* model couples a simple atmospheric radiative transfer, sea-surface reflectance model, moon-phase-dependent top-of-atmosphere lunar irradiance model to estimate lunar spectral irradiance at the surface of the Earth and just below the sea surface. The model estimates top-of-atmosphere lunar spectral irradiance based on Miller and Turner's (2009) lunar spectral irradiance model but using astronomical values (e.g. solar and the position of the Earth, sun, and moon, the moon phase angle, moon zenith angle as observed from a location on the Earth's surface ([Rhodes, 2019](https://github.com/skyfielders/python-skyfield/)), and a Jet Propulsion Laboratory Planetary Development Ephemeris (Park et al., 2021). The Gregg and Carder (1990) model with cloud-cover and sea-state modifications (Gregg, 2002; Gregg and Casey, 2009) then accounts for spectral transmission of top-of-atmosphere lunar irradiance to the earth's surface and through a sea surface. The cloud-cover modification is Slingo's (1989) 24-spectral-band delta-Eddington approximation for two-stream spectral clound transmission. The sea surface reflectance model is a neutral density approximation of direct (Trenberth et al., 1989) and diffuse (Burt, 1954) specular reflectance.
 
 ## Data sets
 

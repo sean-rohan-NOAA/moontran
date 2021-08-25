@@ -84,8 +84,8 @@ def moontran(json_obj):
     return_subsurface_pfd = string_to_bool(x = input_json['return_subsurface_pfd'])
     only_total_pfd = string_to_bool(x = input_json['only_total_pfd'])
     cloud_modification = string_to_bool(x = input_json['cloud_modification'])
-    cloud_droplet_radius = np.array(input_json['cloud_droplet_radius'])
     angstrom_alpha = np.array(input_json['angstrom_alpha'])
+    
     n_obs = input_json['n_obs']
     longitude = expand_array(x = np.array(input_json['longitude']), n_vals = n_obs)
     latitude = expand_array(x = np.array(input_json['latitude']), n_vals = n_obs)
@@ -97,11 +97,16 @@ def moontran(json_obj):
     surface_pressure = expand_array(x = np.array(input_json['surface_pressure']), n_vals = n_obs)
     water_vapor = expand_array(x = np.array(input_json['water_vapor']), n_vals = n_obs)
     wind_speed = expand_array(x = np.array(input_json['wind_speed']), n_vals = n_obs)
-    air_mass = expand_array(x = np.array(input_json['air_mass']), n_vals = n_obs)
-    relative_humidity = expand_array(x = np.array(input_json['relative_humidity']), n_vals = n_obs)
-    liquid_water_path = expand_array(x = np.array(input_json['liquid_water_path']), n_vals = n_obs)
-    visual_range = expand_array(x = np.array(input_json['visual_range']), n_vals = n_obs)
-    aerosol_scale_height = expand_array(x = np.array(input_json['aerosol_scale_height']), n_vals = n_obs)
+
+    # Cloud modification/GC parameters
+    if cloud_modification:
+        liquid_water_path = expand_array(x = np.array(input_json['liquid_water_path']), n_vals = n_obs)
+        cloud_droplet_radius = np.array(input_json['cloud_droplet_radius'])     
+    else:
+        air_mass = expand_array(x = np.array(input_json['air_mass']), n_vals = n_obs)
+        relative_humidity = expand_array(x = np.array(input_json['relative_humidity']), n_vals = n_obs)    
+        visual_range = expand_array(x = np.array(input_json['visual_range']), n_vals = n_obs)
+        aerosol_scale_height = expand_array(x = np.array(input_json['aerosol_scale_height']), n_vals = n_obs)
 
     # Set constants
     km_per_au = 149598073.0
@@ -233,7 +238,8 @@ def moontran(json_obj):
 
             total_ozone = 0.235+(oz_par[0] + oz_par[1]*np.sin(0.9865*(dt.timetuple().tm_yday+oz_par[2])*0.017453)+0.02*np.sin(0.017453*(oz_par[3])*(oz_par[5])))*(np.sin(oz_par[4]*0.017453*latitude[ii]))**2.0
         else:
-            total_ozone = ozone
+            # User-supplied total ozone
+            total_ozone = expand_array(x = np.array(ozone), n_vals = n_obs)
 
         # (17) Transmission: total ozone (absorption coefficients from Inn and Tanaka [1953])
         transmission_toz = np.exp(-1*radtran_df['a_ozone']*amoz*total_ozone)
@@ -257,9 +263,6 @@ def moontran(json_obj):
         b_1 = b_3*(1.459 + b_3*(0.1595 + b_3*0.4129))
         b_2 = b_3*(0.0783 + b_3*(-0.3824 - b_3*0.5874))
         fsp = 1 - 0.5*np.exp((b_1 + b_2*moon_cos_zenith)*moon_cos_zenith)
-      
-        # (36) Single-scattering albedo
-        omega_a = (-0.0032*air_mass[ii] + 0.972) * np.exp(3.06*relative_humidity[ii]*1.0E-4)
 
         # (39-43) Sea-foam reflectance as a function of wind stress (Trenberth et al. 1989)
         if wind_speed[ii] <= 4.0:
@@ -303,76 +306,83 @@ def moontran(json_obj):
         transmission_cloud_diffuse = 1.0
         transmission_cloud_total_direct = 1.0
 
+        """
+        Use Slingo's (1989) delta-Eddington approximation of the two stream approach or
+        Gathman's (1983) US Navy marine aerosol transmission model + Bird and Riordan's (1986)
+        Rayleigh transmission model. 
+        """
         if cloud_modification:
             # Cloud Optical Depth (Slingo 1989 - Eqn. 1) with a mean cloud droplet radius
             tau_clouds = liquid_water_path[ii] * (radtran_df['cloud_a_i'] + radtran_df['cloud_b_i']/cloud_droplet_radius)
-
+            print("tau_clouds", tau_clouds[94])
             # Single Scatter Albedo (Slingo 1989 - Eqn. 2)
             omega_clouds = 1.0 - radtran_df['cloud_c_i'] - radtran_df['cloud_d_i'] * cloud_droplet_radius
-
+            print("omega_clouds", omega_clouds[94])
             # Asymmetry parameter (g) (Slingo 1989 - Eqn. 3)
             asym_clouds = radtran_df['cloud_e_i'] + radtran_df['cloud_f_i'] * cloud_droplet_radius
-
+            print("asym_clouds", asym_clouds[94])
             # Fraction of scattered diffuse radiation scattered backwards (Slingo 1989 - Eqn. 6)
             beta_diffuse = 3.0/7.0 * (1.0 - asym_clouds)
-
+            print("beta_diffuse", beta_diffuse[94])
             # Fraction of direct radiation scattered backwards (Slingo 1989 - Eqn. 7)
-            beta_direct = 0.5 - 3.0 * moon_cos_zenith * asym_clouds / (4.0 * (1.0 + asym_clouds))
-
+            beta_direct = 0.5 - 0.75 * moon_cos_zenith * asym_clouds / (1.0 + asym_clouds)
+            print("beta_direct", beta_direct[94])
             # Fraction of scattered direct flux emerging at zenith angles close to incident beam (Slingo 1989 - Eqn. 8)
             f_foreward = asym_clouds**2.0
-
+            print("f_foreward", f_foreward[94])
             # Reciprocal of cosine of diffuse upward (Slingo 1989 - Eqn. 9)
             u_1 = 7.0/4.0
-
+            print("u_1", u_1)
             # Reciprocal of cosine of diffuse downward (Slingo 1989 - Eqn. 10)
             u_2 = 7.0/4.0*(1.0 - (1.0 - omega_clouds)/(7.0 * omega_clouds * beta_diffuse))
-
+            print("u_2", u_2[94])
             # (Slingo 1989 - Eqn. 11)
             a_1 = u_1 * (1.0 - omega_clouds * (1.0 - beta_diffuse))
-
+            print("a_1", a_1[94])
             # (Slingo 1989 - Eqn. 12)
             a_2 = u_2 * omega_clouds * beta_diffuse
-
+            print("a_2", a_2[94])
             # (Slingo 1989 - Eqn. 13)
             a_3 = (1.0 - f_foreward) * omega_clouds * beta_direct
-
+            print("a_3", a_3[94])
             # (Slingo 1989 - Eqn. 14)
             a_4 = (1.0 - f_foreward) * omega_clouds * (1-beta_direct)
-
-            # (Slingo 1989 - Eqn. 15)
-            epsilon = np.sqrt(abs(a_1**2 - a_2**2))
-
+            print("a_4", a_4[94])
+            # (Slingo 1989 - Eqn. 15) - Modified for zeroes following OASIM
+            epsilon = a_1**2.0 - a_2**2.0
+            epsilon = np.where(epsilon < 1.0E-9, 1.0E-9, epsilon)
+            epsilon = epsilon**0.5
+            print("epsilon", epsilon[94])
             # (Slingo 1989 - Eqn. 16)
             M = a_2 / (a_1 + epsilon)
-
+            print("M", M[94])
             # (Slingo 1989 - Eqn. 17)
             EE = np.exp(-1.0 * epsilon * tau_clouds)
-
+            print("EE", EE[94])
             # (Slingo 1989 - Eqn. 18)
             gamma_1 = ((1.0 - omega_clouds * f_foreward) * a_3 - moon_cos_zenith *(a_1*a_3 + a_2*a_4))/((1.0-omega_clouds*f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
-
+            print("gamma_1", gamma_1[94])
             # (Slingo 1989 - Eqn. 19)
             gamma_2 = -1.0 * ((1.0 - omega_clouds * f_foreward) * a_4 - moon_cos_zenith * (a_1*a_4 + a_2*a_3)) / ((1 - omega_clouds * f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
-
+            print("gamma_2", gamma_2[94])
             # Direct cloud transmission (Slingo 1989 - Eqn. 20)
             transmission_cloud_direct = np.exp(-1.0 * (1.0 - omega_clouds * f_foreward) * tau_clouds / moon_cos_zenith)
-
+            print("T_cloud_direct", transmission_cloud_direct[94])
             # Diffuse reflectivity for diffuse incident radiation (Slingo 1989 - Eqn. 21)
             ref_diffuse = M*(1.0 - EE**2.0)/(1 - EE**2.0 * M**2.0)
-
+            print("ref_diffuse", ref_diffuse[94])
             # Diffuse transmissiviity for diffuse incident radiation (Slingo 1989 - Eqn. 22)
             transmission_cloud_diffuse = EE * (1.0 - M**2.0)/(1 - EE**2 * M**2)
-
+            print("T_cloud_diffuse", transmission_cloud_diffuse[94])
             # Diffuse reflectivity for direct incident radiation (Slingo 1989 - Eqn. 23)
             ref_direct = -1.0 * gamma_2 * ref_diffuse - gamma_1 * transmission_cloud_diffuse * transmission_cloud_direct + gamma_1
-
+            print("T_ref_direct", ref_direct[94])
             # Diffuse transmissivity for direct incident radiation
             transmission_cloud_direct_incident = -1.0 * gamma_2 * transmission_cloud_diffuse - gamma_1 * transmission_cloud_diffuse * ref_diffuse + gamma_2 * transmission_cloud_direct
-
+            print("T_cloud_dir_incident", transmission_cloud_direct_incident[94])
             # Total transmission to direct
             transmission_cloud_total_direct = transmission_cloud_direct + transmission_cloud_direct_incident
-
+            print("T_cloud_tot_direct", transmission_cloud_total_direct[94])
             # Ignore aerosol and Rayleign transmission if clouds are used
             transmission_rayleigh = 1
             transmission_aerosol = 1
@@ -397,6 +407,9 @@ def moontran(json_obj):
             # (30) Transmission: Aerosol 
             transmission_aerosol = np.exp(-1.0 * geometric_airmass * tau_a)
 
+            # (36) Single-scattering albedo
+            omega_a = (-0.0032*air_mass[ii] + 0.972) * np.exp(3.06*relative_humidity[ii]*1.0E-4)
+
             # (7) Transmission: Aerosol scattering
             transmission_as = np.exp(-1.0 * omega_a * tau_a * geometric_airmass)
 
@@ -416,27 +429,6 @@ def moontran(json_obj):
         diffuse_surface_wm2[ii,:] = diffuse_rayleigh + diffuse_scattering
         diffuse_surface_wm2[ii,:] = np.where(diffuse_surface_wm2[ii,:] < 0.0, 0.0, diffuse_surface_wm2[ii,:])
         diffuse_subsurface_wm2[ii,:] = diffuse_surface_wm2[ii,:] * (1.0 - rho_diffuse)
-
-        #print("Moon zenith (degrees): %s"  %moon_zenith[ii])
-        #print("Moon phase (deg): %s"  %mt_phase)
-        #print("Geometric air mass: %s"  %geometric_airmass)
-        #print("Press. corr. air mass: %s"  %pressure_corr_airmass)
-        #print("Effective airmass of ozone: %s"  %amoz)
-        #print("TOA Irradiance: %s"  %np.sum(lunar_toa[ii,:]))
-        #print("Diffuse surface: %s"  %np.sum(diffuse_surface_wm2[ii,:]))
-        #print("Direct surface: %s" %np.sum(direct_surface_wm2[ii,:]))
-        #print("Moon factor: %s" %moon_etc_factor)
-        #print("Transmission (ozone) %s" %np.min(transmission_toz))
-        #print("Transmission (umg) %s" %np.min(transmission_umg))
-        #print("Transmission (water) %s" %np.min(transmission_water))
-        #print("Transmission (aa) %s" %np.min(transmission_aa))
-        #print("Transmission (Rayleigh) %s" %np.min(transmission_rayleigh))
-        #print("Transmission (cloud direct) %s" %np.min(transmission_cloud_total_direct))
-        #print("Transmission (cloud diffuse) %s" %np.min(transmission_cloud_diffuse))
-        #print("Moon cosine zenith %s" %moon_cos_zenith)
-        #print((1.0 - rho_direct))
-        #print((1.0 - rho_diffuse))
-        #print("----")
 
         # Convert watts to photon flux density
         diffuse_surface_pfd[ii,:] = w_v * diffuse_surface_wm2[ii,:] * CONST
@@ -470,4 +462,4 @@ def moontran(json_obj):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1:
-        moontran(json_path = sys.argv[1])
+        moontran(json_obj = sys.argv[1])
