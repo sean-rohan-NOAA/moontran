@@ -314,75 +314,75 @@ def moontran(json_obj):
         if cloud_modification:
             # Cloud Optical Depth (Slingo 1989 - Eqn. 1) with a mean cloud droplet radius
             tau_clouds = liquid_water_path[ii] * (radtran_df['cloud_a_i'] + radtran_df['cloud_b_i']/cloud_droplet_radius)
-            print("tau_clouds", tau_clouds[94])
+
             # Single Scatter Albedo (Slingo 1989 - Eqn. 2)
             omega_clouds = 1.0 - radtran_df['cloud_c_i'] - radtran_df['cloud_d_i'] * cloud_droplet_radius
-            print("omega_clouds", omega_clouds[94])
+
             # Asymmetry parameter (g) (Slingo 1989 - Eqn. 3)
             asym_clouds = radtran_df['cloud_e_i'] + radtran_df['cloud_f_i'] * cloud_droplet_radius
-            print("asym_clouds", asym_clouds[94])
+
             # Fraction of scattered diffuse radiation scattered backwards (Slingo 1989 - Eqn. 6)
             beta_diffuse = 3.0/7.0 * (1.0 - asym_clouds)
-            print("beta_diffuse", beta_diffuse[94])
+
             # Fraction of direct radiation scattered backwards (Slingo 1989 - Eqn. 7)
             beta_direct = 0.5 - 0.75 * moon_cos_zenith * asym_clouds / (1.0 + asym_clouds)
-            print("beta_direct", beta_direct[94])
+
             # Fraction of scattered direct flux emerging at zenith angles close to incident beam (Slingo 1989 - Eqn. 8)
             f_foreward = asym_clouds**2.0
-            print("f_foreward", f_foreward[94])
+
             # Reciprocal of cosine of diffuse upward (Slingo 1989 - Eqn. 9)
             u_1 = 7.0/4.0
-            print("u_1", u_1)
+
             # Reciprocal of cosine of diffuse downward (Slingo 1989 - Eqn. 10)
             u_2 = 7.0/4.0*(1.0 - (1.0 - omega_clouds)/(7.0 * omega_clouds * beta_diffuse))
-            print("u_2", u_2[94])
+
             # (Slingo 1989 - Eqn. 11)
             a_1 = u_1 * (1.0 - omega_clouds * (1.0 - beta_diffuse))
-            print("a_1", a_1[94])
+
             # (Slingo 1989 - Eqn. 12)
             a_2 = u_2 * omega_clouds * beta_diffuse
-            print("a_2", a_2[94])
+
             # (Slingo 1989 - Eqn. 13)
             a_3 = (1.0 - f_foreward) * omega_clouds * beta_direct
-            print("a_3", a_3[94])
+
             # (Slingo 1989 - Eqn. 14)
             a_4 = (1.0 - f_foreward) * omega_clouds * (1-beta_direct)
-            print("a_4", a_4[94])
-            # (Slingo 1989 - Eqn. 15) - Modified for zeroes following OASIM
+
+            # (Slingo 1989 - Eqn. 15) - With changes to handle zeros
             epsilon = a_1**2.0 - a_2**2.0
             epsilon = np.where(epsilon < 1.0E-9, 1.0E-9, epsilon)
             epsilon = epsilon**0.5
-            print("epsilon", epsilon[94])
+ 
             # (Slingo 1989 - Eqn. 16)
             M = a_2 / (a_1 + epsilon)
-            print("M", M[94])
+
             # (Slingo 1989 - Eqn. 17)
             EE = np.exp(-1.0 * epsilon * tau_clouds)
-            print("EE", EE[94])
+
             # (Slingo 1989 - Eqn. 18)
             gamma_1 = ((1.0 - omega_clouds * f_foreward) * a_3 - moon_cos_zenith *(a_1*a_3 + a_2*a_4))/((1.0-omega_clouds*f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
-            print("gamma_1", gamma_1[94])
+
             # (Slingo 1989 - Eqn. 19)
             gamma_2 = -1.0 * ((1.0 - omega_clouds * f_foreward) * a_4 - moon_cos_zenith * (a_1*a_4 + a_2*a_3)) / ((1 - omega_clouds * f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
-            print("gamma_2", gamma_2[94])
+
             # Direct cloud transmission (Slingo 1989 - Eqn. 20)
             transmission_cloud_direct = np.exp(-1.0 * (1.0 - omega_clouds * f_foreward) * tau_clouds / moon_cos_zenith)
-            print("T_cloud_direct", transmission_cloud_direct[94])
+
             # Diffuse reflectivity for diffuse incident radiation (Slingo 1989 - Eqn. 21)
             ref_diffuse = M*(1.0 - EE**2.0)/(1 - EE**2.0 * M**2.0)
-            print("ref_diffuse", ref_diffuse[94])
+
             # Diffuse transmissiviity for diffuse incident radiation (Slingo 1989 - Eqn. 22)
             transmission_cloud_diffuse = EE * (1.0 - M**2.0)/(1 - EE**2 * M**2)
-            print("T_cloud_diffuse", transmission_cloud_diffuse[94])
+
             # Diffuse reflectivity for direct incident radiation (Slingo 1989 - Eqn. 23)
             ref_direct = -1.0 * gamma_2 * ref_diffuse - gamma_1 * transmission_cloud_diffuse * transmission_cloud_direct + gamma_1
-            print("T_ref_direct", ref_direct[94])
+
             # Diffuse transmissivity for direct incident radiation
             transmission_cloud_direct_incident = -1.0 * gamma_2 * transmission_cloud_diffuse - gamma_1 * transmission_cloud_diffuse * ref_diffuse + gamma_2 * transmission_cloud_direct
-            print("T_cloud_dir_incident", transmission_cloud_direct_incident[94])
+
             # Total transmission to direct
             transmission_cloud_total_direct = transmission_cloud_direct + transmission_cloud_direct_incident
-            print("T_cloud_tot_direct", transmission_cloud_total_direct[94])
+
             # Ignore aerosol and Rayleign transmission if clouds are used
             transmission_rayleigh = 1
             transmission_aerosol = 1
