@@ -167,6 +167,7 @@ def moontran(json_obj):
             # Correction based on eastings (west longitude = negative)
             dt = dt + datetime.timedelta(hours = abs(longitude[ii]) / 15.0)
             dt  = dt.replace(tzinfo = utc)
+        #print(dt)
             
         t.append(ts.utc(dt.year, dt.month, dt.day, dt.hour, dt.minute))
 
@@ -215,7 +216,7 @@ def moontran(json_obj):
             geometric_airmass = 1.0 / (moon_cos_zenith + 0.50572 * (96.07995 - moon_zenith[ii])**-1.6364)
         else:
             geometric_airmass = np.sqrt((707.89 * moon_cos_zenith)**2.0 + 2.0*707.89 + 1.0) - 707.89 * moon_cos_zenith
-
+            
         # (GC 14) Effective airmass of ozone (Paltridge and Platt 1976)
         amoz = (1+22/6370)/(moon_cos_zenith**2 + 2*(22/6370))**0.5
 
@@ -262,8 +263,8 @@ def moontran(json_obj):
         b_3 = np.log(1-asym)
         b_1 = b_3*(1.459 + b_3*(0.1595 + b_3*0.4129))
         b_2 = b_3*(0.0783 + b_3*(-0.3824 - b_3*0.5874))
-        fsp = 1 - 0.5*np.exp((b_1 + b_2*moon_cos_zenith)*moon_cos_zenith)
-
+        fsp = np.max([1 - 0.5*np.exp((b_1 + b_2*moon_cos_zenith)*moon_cos_zenith), 0])
+        
         # (39-43) Sea-foam reflectance as a function of wind stress (Trenberth et al. 1989)
         if wind_speed[ii] <= 4.0:
             rho_f = 0.0
@@ -279,15 +280,16 @@ def moontran(json_obj):
         # rho_f <- rho_f * foam_spectral_correction
 
         # (44-47) Direct specular reflectance
-        rho_dsp = 0
 
-        if moon_zenith[ii] >= 40:
-            if wind_speed[ii] > 2:
-                rho_dsp = 0.0253 * np.exp((-7.14E-4 * wind_speed[ii] + 0.0618)*(moon_zenith[ii] - 40.0))
+        if moon_zenith[ii] < 40 or wind_speed[ii] < 2:
+            if moon_zenith == 0.0:
+                rho_dsp = 0.0211
             else:
                 moon_z_rad = np.deg2rad(moon_zenith[ii])
                 refracted_angle = np.arcsin(np.sin(moon_z_rad) / water_refraction)
                 rho_dsp = 0.5 * (0.5 * np.sin(moon_z_rad)**2.0 / np.sin(moon_z_rad + refracted_angle)**2+ np.tan(moon_z_rad - refracted_angle)**2.0 / np.tan(moon_z_rad + refracted_angle)**2.0)
+        else:
+            rho_dsp = 0.0253 * np.exp((-7.14E-4 * wind_speed[ii] + 0.0618)*(moon_zenith[ii] - 40.0))
 
         # Diffuse specular reflectance (Burt 1954)
         if wind_speed[ii] > 4:
@@ -295,11 +297,13 @@ def moontran(json_obj):
         else:
             rho_ssp = 0.066
 
-        # (37) Surface reflectance (direct)
+        # (37) Surface reflectance (direct) - With maximum set to 1
         rho_direct = rho_dsp + rho_f
+        rho_direct = np.where(rho_direct > 1, 1, rho_direct)
         
-        # (38) Surface reflectance (diffuse)
+        # (38) Surface reflectance (diffuse) - With maximum set to 1
         rho_diffuse = rho_ssp + rho_f
+        rho_diffuse = np.where(rho_diffuse > 1, 1, rho_diffuse)
 
         # Cloudless sky = 100% transmisson
         transmission_cloud_direct = 1.0
@@ -359,20 +363,24 @@ def moontran(json_obj):
             # (Slingo 1989 - Eqn. 17)
             EE = np.exp(-1.0 * epsilon * tau_clouds)
 
-            # (Slingo 1989 - Eqn. 18)
-            gamma_1 = ((1.0 - omega_clouds * f_foreward) * a_3 - moon_cos_zenith *(a_1*a_3 + a_2*a_4))/((1.0-omega_clouds*f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
+            # (Slingo 1989 - Eqn. 18) - added + 0.00001 to avoid NaN
+            gamma_1 = ((1.0 - omega_clouds * f_foreward) * a_3 - moon_cos_zenith *(a_1*a_3 + a_2*a_4))/((1.0-omega_clouds*f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0 + 0.00001)
 
-            # (Slingo 1989 - Eqn. 19)
-            gamma_2 = -1.0 * ((1.0 - omega_clouds * f_foreward) * a_4 - moon_cos_zenith * (a_1*a_4 + a_2*a_3)) / ((1 - omega_clouds * f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0)
+            # (Slingo 1989 - Eqn. 19) - added + 0.00001 to avoid NaN
+            gamma_2 = -1.0 * ((1.0 - omega_clouds * f_foreward) * a_4 - moon_cos_zenith * (a_1*a_4 + a_2*a_3)) / ((1 - omega_clouds * f_foreward)**2.0 - epsilon**2.0 * moon_cos_zenith**2.0 + 0.00001)
 
             # Direct cloud transmission (Slingo 1989 - Eqn. 20)
             transmission_cloud_direct = np.exp(-1.0 * (1.0 - omega_clouds * f_foreward) * tau_clouds / moon_cos_zenith)
+            if moon_cos_zenith < 0:
+                transmission_cloud_direct = np.where(transmission_cloud_direct > 1, 0, transmission_cloud_direct)
+            else:
+                transmission_cloud_direct = np.where(transmission_cloud_direct > 1, 1, transmission_cloud_direct)
 
-            # Diffuse reflectivity for diffuse incident radiation (Slingo 1989 - Eqn. 21)
-            ref_diffuse = M*(1.0 - EE**2.0)/(1 - EE**2.0 * M**2.0)
+            # Diffuse reflectivity for diffuse incident radiation (Slingo 1989 - Eqn. 21) - added + 0.00001 to avoid NaN
+            ref_diffuse = M*(1.0 - EE**2.0)/(1 - EE**2.0 * M**2.0 + 0.00001)
 
-            # Diffuse transmissiviity for diffuse incident radiation (Slingo 1989 - Eqn. 22)
-            transmission_cloud_diffuse = EE * (1.0 - M**2.0)/(1 - EE**2 * M**2)
+            # Diffuse transmissiviity for diffuse incident radiation (Slingo 1989 - Eqn. 22) - added + 0.00001 to avoid NaN
+            transmission_cloud_diffuse = EE * (1.0 - M**2.0)/(1 - EE**2 * M**2 + 0.00001)
 
             # Diffuse reflectivity for direct incident radiation (Slingo 1989 - Eqn. 23)
             ref_direct = -1.0 * gamma_2 * ref_diffuse - gamma_1 * transmission_cloud_diffuse * transmission_cloud_direct + gamma_1
@@ -416,6 +424,8 @@ def moontran(json_obj):
             # (5) Transmission: Aerosol absorption
             transmission_aa = np.exp(-1.0 * (1.0 - omega_a) * tau_a * geometric_airmass)
 
+        # print('{:.2f}'.format(minute[ii]), '{:.2f}'.format(geometric_airmass), '{:.2f}'.format(90.0-alt.degrees), '{:.5f}'.format(moon_cos_zenith), '{:.2f}'.format(amoz), '{:.2f}'.format(np.max(transmission_toz)), '{:.2f}'.format(np.max(transmission_umg)), '{:.2f}'.format(np.max(transmission_water)), '{:.2f}'.format(fsp), '{:.2f}'.format(np.max(beta_direct)), '{:.2f}'.format(np.max(transmission_cloud_direct)), '{:.5f}'.format(np.min(transmission_cloud_direct)), '{:.2f}'.format(np.min(rho_diffuse)), '{:.2f}'.format(np.min(rho_direct)))
+
         # (9) Direct downwelling irradiance
         direct_surface_wm2[ii,:] = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_aerosol * transmission_umg * transmission_water * transmission_toz * transmission_rayleigh * transmission_cloud_total_direct
         direct_surface_wm2[ii,:] = np.where(direct_surface_wm2[ii,:] < 0.0, 0.0, direct_surface_wm2[ii,:])
@@ -423,11 +433,12 @@ def moontran(json_obj):
 
         # (4) Diffuse component from Rayleigh scattering
         diffuse_rayleigh = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith *transmission_toz * transmission_umg * transmission_water * transmission_aa * (1.0 - transmission_rayleigh**0.95)*0.5
+        diffuse_rayleigh = np.where(diffuse_rayleigh < 0.0, 0.0, diffuse_rayleigh)
         diffuse_scattering = lunar_toa[ii,:] * moon_etc_factor * moon_cos_zenith * transmission_toz * transmission_umg * transmission_water * transmission_rayleigh * (1.0 - transmission_as) * fsp * transmission_cloud_diffuse
+        diffuse_scattering = np.where(diffuse_scattering < 0.0, 0.0, diffuse_scattering)
       
         # (10) Diffuse downwelling irradiance
         diffuse_surface_wm2[ii,:] = diffuse_rayleigh + diffuse_scattering
-        diffuse_surface_wm2[ii,:] = np.where(diffuse_surface_wm2[ii,:] < 0.0, 0.0, diffuse_surface_wm2[ii,:])
         diffuse_subsurface_wm2[ii,:] = diffuse_surface_wm2[ii,:] * (1.0 - rho_diffuse)
 
         # Convert watts to photon flux density
