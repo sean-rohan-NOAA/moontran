@@ -114,7 +114,7 @@ def moontran(json_obj):
     mean_earthmoon_dist = 384400.0 / km_per_au
     radius_earth = 6378.140 / km_per_au
     water_refraction = 1.341
-    mW_to_W = 1.0E-6
+    mW_to_W = 1.0E-3
     CONST = (1/(6.626176E-34*299792458.0))*1.0E-10
 
     # Load TOA mean lunar spectral irradiance table, distance variables (Miller and Turner 2009)
