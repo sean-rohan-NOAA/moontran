@@ -253,7 +253,7 @@ def moontran(json_obj):
 
         # (35) Asymmetry parameter for scattering phase function
         if angstrom_alpha < 0.0:
-            asym <- 0.82
+            asym = 0.82
         elif angstrom_alpha > 1.2:
             asym = 1.2
         else:
@@ -448,9 +448,11 @@ def moontran(json_obj):
         direct_surface_pfd[ii,:] = w_v * direct_surface_wm2[ii,:] * CONST
         direct_subsurface_pfd[ii,:] = w_v * direct_subsurface_wm2[ii,:] * CONST
 
+    total_surface_wm2 = diffuse_surface_wm2 + direct_surface_wm2
+    total_subsurface_wm2 = diffuse_subsurface_wm2 + direct_subsurface_wm2
     total_surface_pfd = diffuse_surface_pfd + direct_surface_pfd
     total_subsurface_pfd = diffuse_subsurface_pfd + direct_subsurface_pfd
-
+    
     # Only return total_subsurface_pfd
     if return_subsurface_pfd:
         return(pd.DataFrame(total_subsurface_pfd, columns = (w_v * 1000).astype(int)))
@@ -469,6 +471,8 @@ def moontran(json_obj):
         pd.DataFrame(direct_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("direct_subsurface_pfd.csv", index = False)
         pd.DataFrame(diffuse_surface_pfd, columns = (w_v * 1000).astype(int)).to_csv("diffuse_surface_pfd.csv", index = False)
         pd.DataFrame(diffuse_subsurface_pfd, columns = (w_v * 1000).astype(int)).to_csv("diffuse_subsurface_pfd.csv", index = False)
+
+    return(pd.DataFrame({'wavelength': (w_v * 1000).astype(int), 'direct_surface_wm2_nm': direct_surface_wm2[0, :], 'diffuse_surface_wm2_nm': diffuse_surface_wm2[0, :], 'total_surface_wm2_nm': total_surface_wm2[0, :], 'direct_subsurface_wm2_nm': direct_subsurface_wm2[0, :], 'diffuse_subsurface_wm2_nm': diffuse_subsurface_wm2[0, :], 'total_subsurface_wm2_nm': total_subsurface_wm2[0, :], 'direct_surface_pfd': direct_surface_pfd[0, :], 'diffuse_surface_pfd': diffuse_surface_pfd[0, :], 'total_surface_pfd': total_surface_pfd[0, :], 'direct_subsurface_pfd': direct_subsurface_pfd[0, :], 'diffuse_subsurface_pfd': diffuse_subsurface_pfd[0, :], 'total_subsurface_pfd': total_subsurface_pfd[0, :]}))
 
 if __name__ == '__main__':
     import sys
